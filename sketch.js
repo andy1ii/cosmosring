@@ -44,7 +44,7 @@ let recordBtn;
 
 // --- GADGET UI VARS ---
 let gadgetContainer; 
-let pillInput;        
+let pillInput;         
 let pillDisplayText;  
 let pillCounter;      
 
@@ -195,7 +195,7 @@ function styleGadgetElement(elt) {
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
   elt.style('border-radius', '8px'); 
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
-  elt.style('padding', '12px 6px'); // Increased Top/Bottom to 12px, Decreased Left/Right to 6px
+  elt.style('padding', '10px 6px'); // Updated: Decreased Top/Bottom from 12px to 10px
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
   elt.style('font-size', '16px'); 
   elt.style('color', '#000');
@@ -467,9 +467,9 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-  // UPDATED EXPORT PADDING: Matches 12px Top/Bottom and 6px Left/Right
+  // UPDATED EXPORT PADDING: Matches 10px Top/Bottom and 6px Left/Right
   let padX = 6 * exportRatio; 
-  let padY = 12 * exportRatio; 
+  let padY = 10 * exportRatio; 
   let gap = 10 * exportRatio;
   let radius = 8 * exportRatio;
   

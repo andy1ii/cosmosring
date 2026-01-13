@@ -195,7 +195,7 @@ function styleGadgetElement(elt) {
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
   elt.style('border-radius', '8px'); 
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
-  elt.style('padding', '8px 9px'); // Updated horizontal padding to 9px
+  elt.style('padding', '12px 6px'); // Increased Top/Bottom to 12px, Decreased Left/Right to 6px
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
   elt.style('font-size', '16px'); 
   elt.style('color', '#000');
@@ -455,8 +455,9 @@ function drawGadgetOverlay() {
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
+  let scaledFontSize = 16 * exportRatio;
   overlayPG.textFont(FONT_NAME);
-  ctx.font = `16px '${FONT_NAME}', sans-serif`; 
+  ctx.font = `${scaledFontSize}px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   
@@ -466,18 +467,22 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-  // Matching UI padding: 8px vertical, 9px horizontal (9 * 2 = 18)
-  let padX = 9 * 2, padY = 8 * 2; 
-  let h = 16 + padY; 
-  let w1 = txtWidth + padX;
-  let w2 = countWidth + padX, gap = 10;
+  // UPDATED EXPORT PADDING: Matches 12px Top/Bottom and 6px Left/Right
+  let padX = 6 * exportRatio; 
+  let padY = 12 * exportRatio; 
+  let gap = 10 * exportRatio;
+  let radius = 8 * exportRatio;
+  
+  let h = scaledFontSize + (padY * 2); 
+  let w1 = txtWidth + (padX * 2);
+  let w2 = countWidth + (padX * 2);
   let totalW = w1 + gap + w2;
 
   let startX = (width - totalW) / 2, centerY = height / 2;
-  let topY = centerY - h/2, radius = 8; 
+  let topY = centerY - h/2; 
   
   let bgImg = get(startX, topY, totalW, h);
-  bgImg.filter(BLUR, 10); 
+  bgImg.filter(BLUR, 10 * exportRatio); 
   
   // Draw Pill 1
   ctx.save();
@@ -487,7 +492,7 @@ function drawGadgetOverlay() {
   ctx.drawImage(bgImg.canvas, 0, 0, w1, h, startX, topY, w1, h);
   ctx.fillStyle = "rgba(235, 235, 235, 0.85)"; 
   ctx.fill(); 
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1 * exportRatio;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore(); 
@@ -500,7 +505,7 @@ function drawGadgetOverlay() {
   ctx.drawImage(bgImg.canvas, w1 + gap, 0, w2, h, startX + w1 + gap, topY, w2, h);
   ctx.fillStyle = "rgba(235, 235, 235, 0.85)";
   ctx.fill();
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1 * exportRatio;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore();

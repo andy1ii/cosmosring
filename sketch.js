@@ -189,15 +189,16 @@ function updatePillText() {
     pillDisplayText.html(text);
 }
 
+// REDUCED SIZE HERE
 function styleGadgetElement(elt) {
   elt.style('background', 'rgba(235, 235, 235, 0.85)');
   elt.style('backdrop-filter', 'blur(100px)'); 
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
-  elt.style('border-radius', '14px'); 
+  elt.style('border-radius', '8px'); // Smaller radius
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
-  elt.style('padding', '20px 15px'); 
+  elt.style('padding', '8px 14px'); // Significantly smaller padding
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
-  elt.style('font-size', '36px'); 
+  elt.style('font-size', '16px'); // Smaller font
   elt.style('color', '#000');
   elt.style('outline', 'none');
   elt.style('text-align', 'center');
@@ -448,6 +449,7 @@ function draw() {
   }
 }
 
+// REDUCED OVERLAY PILL SIZE
 function drawGadgetOverlay() {
   if (overlayPG.width !== width || overlayPG.height !== height) {
       overlayPG = createGraphics(width, height);
@@ -456,7 +458,7 @@ function drawGadgetOverlay() {
   let ctx = overlayPG.drawingContext;
   
   overlayPG.textFont(FONT_NAME);
-  ctx.font = `36px '${FONT_NAME}', sans-serif`;
+  ctx.font = `16px '${FONT_NAME}', sans-serif`; // Match UI smaller font
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   
@@ -465,16 +467,21 @@ function drawGadgetOverlay() {
   let countTxt = nodes.length + " elements";
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
-  let padX = 15 * 2, padY = 20 * 2; 
-  let w1 = txtWidth + padX, h = 36 + padY;
+
+  // Matching UI padding: 8px vertical, 14px horizontal
+  let padX = 14 * 2, padY = 8 * 2; 
+  let h = 16 + padY; // Font size + padding
+  let w1 = txtWidth + padX;
   let w2 = countWidth + padX, gap = 10;
   let totalW = w1 + gap + w2;
+
   let startX = (width - totalW) / 2, centerY = height / 2;
-  let topY = centerY - h/2, radius = 14; 
+  let topY = centerY - h/2, radius = 8; 
   
   let bgImg = get(startX, topY, totalW, h);
   bgImg.filter(BLUR, 10); 
   
+  // Draw Pill 1
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(startX, topY, w1, h, radius); 
@@ -487,6 +494,7 @@ function drawGadgetOverlay() {
   ctx.stroke();
   ctx.restore(); 
   
+  // Draw Pill 2
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(startX + w1 + gap, topY, w2, h, radius);

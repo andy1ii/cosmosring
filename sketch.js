@@ -189,16 +189,15 @@ function updatePillText() {
     pillDisplayText.html(text);
 }
 
-// REDUCED SIZE HERE
 function styleGadgetElement(elt) {
   elt.style('background', 'rgba(235, 235, 235, 0.85)');
   elt.style('backdrop-filter', 'blur(100px)'); 
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
-  elt.style('border-radius', '8px'); // Smaller radius
+  elt.style('border-radius', '8px'); 
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
-  elt.style('padding', '8px 14px'); // Significantly smaller padding
+  elt.style('padding', '8px 9px'); // Updated horizontal padding to 9px
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
-  elt.style('font-size', '16px'); // Smaller font
+  elt.style('font-size', '16px'); 
   elt.style('color', '#000');
   elt.style('outline', 'none');
   elt.style('text-align', 'center');
@@ -449,7 +448,6 @@ function draw() {
   }
 }
 
-// REDUCED OVERLAY PILL SIZE
 function drawGadgetOverlay() {
   if (overlayPG.width !== width || overlayPG.height !== height) {
       overlayPG = createGraphics(width, height);
@@ -458,7 +456,7 @@ function drawGadgetOverlay() {
   let ctx = overlayPG.drawingContext;
   
   overlayPG.textFont(FONT_NAME);
-  ctx.font = `16px '${FONT_NAME}', sans-serif`; // Match UI smaller font
+  ctx.font = `16px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   
@@ -468,9 +466,9 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-  // Matching UI padding: 8px vertical, 14px horizontal
-  let padX = 14 * 2, padY = 8 * 2; 
-  let h = 16 + padY; // Font size + padding
+  // Matching UI padding: 8px vertical, 9px horizontal (9 * 2 = 18)
+  let padX = 9 * 2, padY = 8 * 2; 
+  let h = 16 + padY; 
   let w1 = txtWidth + padX;
   let w2 = countWidth + padX, gap = 10;
   let totalW = w1 + gap + w2;

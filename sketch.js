@@ -165,7 +165,8 @@ function setupGadget() {
   
   gadgetContainer = createDiv('');
   gadgetContainer.style('display', 'flex');
-  gadgetContainer.style('gap', '40px'); // Doubled gap again
+// UPDATED GAP: 2x original (10px * 2)
+  gadgetContainer.style('gap', '20px');
   gadgetContainer.style('align-items', 'center');
   gadgetContainer.style('justify-content', 'center');
   gadgetContainer.style('position', 'absolute');
@@ -193,14 +194,16 @@ function styleGadgetElement(elt) {
   elt.style('background', 'rgba(235, 235, 235, 0.85)');
   elt.style('backdrop-filter', 'blur(100px)'); 
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
-  elt.style('border-radius', '32px'); // Doubled radius again
+// UPDATED RADIUS: 2x original (8px * 2)
+  elt.style('border-radius', '16px');
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
   
-  // UPDATED: Doubled Padding again to 44px 40px
-  elt.style('padding', '44px 40px'); 
+// UPDATED PADDING: 2x original (11px/9px * 2)
+  elt.style('padding', '22px 18px'); 
   
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
-  elt.style('font-size', '64px'); // Doubled font size again
+// UPDATED FONT SIZE: 2x original (16px * 2)
+  elt.style('font-size', '32px');
   elt.style('color', '#000');
   elt.style('outline', 'none');
   elt.style('text-align', 'center');
@@ -458,8 +461,8 @@ function drawGadgetOverlay() {
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-  // UPDATED: Doubled font size again (64 * exportRatio)
-  let scaledFontSize = 64 * exportRatio;
+// UPDATED FONT SIZE: 2x original (16 * 2 * exportRatio)
+  let scaledFontSize = 32 * exportRatio;
   overlayPG.textFont(FONT_NAME);
   ctx.font = `${scaledFontSize}px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
@@ -471,11 +474,11 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-  // UPDATED EXPORT PADDING: Doubled again from (20, 22, 20, 16) to (40, 44, 40, 32)
-  let padX = 40 * exportRatio; 
-  let padY = 44 * exportRatio; 
-  let gap = 40 * exportRatio;
-  let radius = 32 * exportRatio;
+// UPDATED EXPORT PADDING/GAP/RADIUS: 2x original values
+  let padX = 18 * exportRatio; 
+  let padY = 22 * exportRatio; 
+  let gap = 20 * exportRatio;
+  let radius = 16 * exportRatio;
   
   let h = scaledFontSize + (padY * 2); 
   let w1 = txtWidth + (padX * 2);

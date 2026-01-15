@@ -47,8 +47,6 @@ let gadgetContainer;
 let pillInput;          
 let pillDisplayText;  
 let pillCounter;
-// Global scale factor to ensure Export matches Preview exactly
-let gadgetScaleFactor = 1.0;        
 
 // --- 2D OVERLAY BUFFER ---
 let overlayPG; 
@@ -124,8 +122,7 @@ function setup() {
 
   generatePlaceholders();
   
-  // Initialize layout once
-  layoutGadget();
+  layoutGadget(); // Initial layout
   positionUI(); 
   
   changeMode(4); 
@@ -214,27 +211,25 @@ function styleGadgetElement(elt) {
   elt.style('white-space', 'nowrap'); 
 }
 
-// --- RESPONSIVE SIZING LOGIC ---
+// --- RESPONSIVE SIZING LOGIC (For Browser DOM) ---
 function layoutGadget() {
-  // 1. Calculate Scale Factor based on window height
-  // Reference height: 1000px.
-  // We clamp it so it doesn't get microscopically small or absolutely massive.
-  let h = windowHeight;
-  gadgetScaleFactor = constrain(h / 1000.0, 0.5, 1.5);
-
-  // 2. Define 1.5x Base Values (at scale 1.0)
-  // Font: 24px
-  // PadY: 17px, PadX: 15px
-  // Radius: 12px
-  // Gap: 15px
+  // This function ONLY affects the live HTML elements in the browser.
+  // It clamps values so they don't look weird on extreme window sizes.
   
-  let gFont = 24 * gadgetScaleFactor;
-  let gPadY = 17 * gadgetScaleFactor;
-  let gPadX = 15 * gadgetScaleFactor;
-  let gRadius = 12 * gadgetScaleFactor;
-  let gGap = 15 * gadgetScaleFactor;
+  // Base Height: 1000px
+  // 1.5x Values: Font 24, Pad 17/15, Radius 12
+  
+  let h = windowHeight;
+  // Constraint keeps the UI usable on very small or very tall browser windows
+  let domScale = constrain(h / 1000.0, 0.5, 1.2); 
 
-  // 3. Apply to DOM Elements (Live View)
+  let gFont = 24 * domScale;
+  let gPadY = 17 * domScale;
+  let gPadX = 15 * domScale;
+  let gRadius = 12 * domScale;
+  let gGap = 15 * domScale;
+
+  // Apply to DOM
   gadgetContainer.style('gap', `${gGap}px`);
   
   let elements = [pillDisplayText, pillCounter];
@@ -380,6 +375,8 @@ function stopVideoExport() {
         resizeCanvas(windowWidth, windowHeight);
         exportRatio = 1;
         aspectMultiplier = 1;
+        // Recalculate UI for window
+        layoutGadget();
         positionUI();
         toggleUI(isUIVisible);
     }
@@ -410,6 +407,8 @@ function handleExport() {
   isExporting = false;
   exportRatio = 1;
   aspectMultiplier = 1;
+  // Recalculate UI for window
+  layoutGadget();
   positionUI();
   toggleUI(isUIVisible);
 }
@@ -490,26 +489,37 @@ function draw() {
 }
 
 function drawGadgetOverlay() {
+  // This function draws the overlay onto the Export/Record CANVAS
+  // It must rely on 'width' and 'height' (canvas dims), NOT 'windowHeight'
+  
   if (overlayPG.width !== width || overlayPG.height !== height) {
       overlayPG = createGraphics(width, height);
   }
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-  // FIX: Multiply BASE sizes by BOTH exportRatio AND gadgetScaleFactor
-  // This ensures the export looks exactly like the live preview,
-  // even if the live preview was scaled down for a small screen.
+  // --- EXPORT SCALING LOGIC ---
+  // We want the gadget to scale linearly with the canvas height.
+  // Reference height: 1000px.
+  // At 1000px, 1.5x values: Font 24, Pad 17/15, Radius 12.
   
-  let finalScale = gadgetScaleFactor * exportRatio;
-
-  // Base 1.5x Values
+  let exportScale = height / 1000.0;
+  
+  // UNCLAMPED: If we export at 4000px, we want the text to be HUGE (4x).
+  // If we record at 500px, we want it small (0.5x).
+  
   let baseFont = 24;
   let basePadX = 15;
   let basePadY = 17;
   let baseGap = 15;
   let baseRadius = 12;
 
-  let scaledFontSize = baseFont * finalScale;
+  let scaledFontSize = baseFont * exportScale;
+  let padX = basePadX * exportScale; 
+  let padY = basePadY * exportScale; 
+  let gap = baseGap * exportScale;
+  let radius = baseRadius * exportScale;
+
   overlayPG.textFont(FONT_NAME);
   ctx.font = `${scaledFontSize}px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
@@ -520,12 +530,6 @@ function drawGadgetOverlay() {
   let countTxt = nodes.length + " elements";
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
-
-  // Apply Combined Scale
-  let padX = basePadX * finalScale; 
-  let padY = basePadY * finalScale; 
-  let gap = baseGap * finalScale;
-  let radius = baseRadius * finalScale;
   
   let h = scaledFontSize + (padY * 2); 
   let w1 = txtWidth + (padX * 2);
@@ -536,7 +540,8 @@ function drawGadgetOverlay() {
   let topY = centerY - h/2; 
   
   let bgImg = get(startX, topY, totalW, h);
-  bgImg.filter(BLUR, 10 * exportRatio); 
+  // Blur radius also scales
+  bgImg.filter(BLUR, 10 * exportScale); 
   
   // Draw Pill 1
   ctx.save();
@@ -546,7 +551,7 @@ function drawGadgetOverlay() {
   ctx.drawImage(bgImg.canvas, 0, 0, w1, h, startX, topY, w1, h);
   ctx.fillStyle = "rgba(235, 235, 235, 0.85)"; 
   ctx.fill(); 
-  ctx.lineWidth = 1 * exportRatio;
+  ctx.lineWidth = 1 * exportScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore(); 
@@ -559,7 +564,7 @@ function drawGadgetOverlay() {
   ctx.drawImage(bgImg.canvas, w1 + gap, 0, w2, h, startX + w1 + gap, topY, w2, h);
   ctx.fillStyle = "rgba(235, 235, 235, 0.85)";
   ctx.fill();
-  ctx.lineWidth = 1 * exportRatio;
+  ctx.lineWidth = 1 * exportScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore();

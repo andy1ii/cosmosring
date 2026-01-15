@@ -46,7 +46,9 @@ let recordBtn;
 let gadgetContainer; 
 let pillInput;          
 let pillDisplayText;  
-let pillCounter;        
+let pillCounter;
+// Global scale factor to ensure Export matches Preview exactly
+let gadgetScaleFactor = 1.0;        
 
 // --- 2D OVERLAY BUFFER ---
 let overlayPG; 
@@ -69,7 +71,6 @@ const FONT_FILE = 'resources/ABCOracle-Book.otf';
 function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL);
   
-  // Ensure consistent sizing across high-DPI screens
   pixelDensity(1);
   noStroke();
   textureMode(NORMAL);
@@ -122,7 +123,11 @@ function setup() {
   setupGadget();
 
   generatePlaceholders();
-  positionUI(); // layoutGadget is called inside here now
+  
+  // Initialize layout once
+  layoutGadget();
+  positionUI(); 
+  
   changeMode(4); 
 }
 
@@ -160,8 +165,7 @@ function setupModeButtons() {
 
 function setupGadget() {
   pillInput = createInput('Feeeeeelings');
-  
-  // Basic structural styling, sizes will be set in layoutGadget
+  // Structural styles only, dimensions handled in layoutGadget
   pillInput.style('background', 'transparent');
   pillInput.style('border', '1px solid #ccc');
   pillInput.style('border-radius', '4px');
@@ -181,11 +185,10 @@ function setupGadget() {
   gadgetContainer.style('z-index', '1000');
   
   pillDisplayText = createDiv('Feeeeeelings');
-  // Base styling, dimensions handled dynamically
-  styleGadgetBase(pillDisplayText);
+  styleGadgetElement(pillDisplayText);
   
   pillCounter = createDiv('0 elements');
-  styleGadgetBase(pillCounter);
+  styleGadgetElement(pillCounter);
   
   pillDisplayText.parent(gadgetContainer);
   pillCounter.parent(gadgetContainer);
@@ -199,7 +202,7 @@ function updatePillText() {
     pillDisplayText.html(text);
 }
 
-function styleGadgetBase(elt) {
+function styleGadgetElement(elt) {
   elt.style('background', 'rgba(235, 235, 235, 0.85)');
   elt.style('backdrop-filter', 'blur(100px)'); 
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
@@ -211,30 +214,29 @@ function styleGadgetBase(elt) {
   elt.style('white-space', 'nowrap'); 
 }
 
-// --- NEW FUNCTION: Handles Responsive Sizing ---
+// --- RESPONSIVE SIZING LOGIC ---
 function layoutGadget() {
+  // 1. Calculate Scale Factor based on window height
   // Reference height: 1000px.
-  // 1.5x Scale Values:
-  // Font: 24px
-  // Padding: ~17px 15px
-  // Radius: 12px
-  
+  // We clamp it so it doesn't get microscopically small or absolutely massive.
   let h = windowHeight;
-  let scaleFactor = h / 1000.0; 
+  gadgetScaleFactor = constrain(h / 1000.0, 0.5, 1.5);
+
+  // 2. Define 1.5x Base Values (at scale 1.0)
+  // Font: 24px
+  // PadY: 17px, PadX: 15px
+  // Radius: 12px
+  // Gap: 15px
   
-  // Clamp scale so it doesn't get too tiny on phones or too huge on 4k
-  scaleFactor = constrain(scaleFactor, 0.5, 1.5);
+  let gFont = 24 * gadgetScaleFactor;
+  let gPadY = 17 * gadgetScaleFactor;
+  let gPadX = 15 * gadgetScaleFactor;
+  let gRadius = 12 * gadgetScaleFactor;
+  let gGap = 15 * gadgetScaleFactor;
 
-  let gFont = 24 * scaleFactor;
-  let gPadY = 17 * scaleFactor;
-  let gPadX = 15 * scaleFactor;
-  let gRadius = 12 * scaleFactor;
-  let gGap = 15 * scaleFactor;
-
-  // Apply to container
+  // 3. Apply to DOM Elements (Live View)
   gadgetContainer.style('gap', `${gGap}px`);
   
-  // Apply to elements
   let elements = [pillDisplayText, pillCounter];
   for(let elt of elements) {
     elt.style('font-size', `${gFont}px`);
@@ -494,9 +496,20 @@ function drawGadgetOverlay() {
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-  // Dynamic scaling for export
-  // Base 1.5x size at normal scale is 24px
-  let scaledFontSize = 24 * exportRatio;
+  // FIX: Multiply BASE sizes by BOTH exportRatio AND gadgetScaleFactor
+  // This ensures the export looks exactly like the live preview,
+  // even if the live preview was scaled down for a small screen.
+  
+  let finalScale = gadgetScaleFactor * exportRatio;
+
+  // Base 1.5x Values
+  let baseFont = 24;
+  let basePadX = 15;
+  let basePadY = 17;
+  let baseGap = 15;
+  let baseRadius = 12;
+
+  let scaledFontSize = baseFont * finalScale;
   overlayPG.textFont(FONT_NAME);
   ctx.font = `${scaledFontSize}px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
@@ -508,11 +521,11 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-  // 1.5x Scaled metrics
-  let padX = 15 * exportRatio; 
-  let padY = 17 * exportRatio; 
-  let gap = 15 * exportRatio;
-  let radius = 12 * exportRatio;
+  // Apply Combined Scale
+  let padX = basePadX * finalScale; 
+  let padY = basePadY * finalScale; 
+  let gap = baseGap * finalScale;
+  let radius = baseRadius * finalScale;
   
   let h = scaledFontSize + (padY * 2); 
   let w1 = txtWidth + (padX * 2);

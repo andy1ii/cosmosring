@@ -165,7 +165,7 @@ function setupGadget() {
   
   gadgetContainer = createDiv('');
   gadgetContainer.style('display', 'flex');
-  gadgetContainer.style('gap', '10px');
+  gadgetContainer.style('gap', '20px'); // Increased gap
   gadgetContainer.style('align-items', 'center');
   gadgetContainer.style('justify-content', 'center');
   gadgetContainer.style('position', 'absolute');
@@ -193,14 +193,14 @@ function styleGadgetElement(elt) {
   elt.style('background', 'rgba(235, 235, 235, 0.85)');
   elt.style('backdrop-filter', 'blur(100px)'); 
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
-  elt.style('border-radius', '8px'); 
+  elt.style('border-radius', '16px'); // Doubled radius
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
   
-  // UPDATED: Increased Top/Bottom to 11px, Left/Right to 7px
-  elt.style('padding', '11px 10px'); 
+  // UPDATED: Doubled Padding (22px 20px)
+  elt.style('padding', '22px 20px'); 
   
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
-  elt.style('font-size', '16px'); 
+  elt.style('font-size', '32px'); // Doubled font size
   elt.style('color', '#000');
   elt.style('outline', 'none');
   elt.style('text-align', 'center');
@@ -458,7 +458,8 @@ function drawGadgetOverlay() {
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-  let scaledFontSize = 16 * exportRatio;
+  // UPDATED: Doubled font size (32 * exportRatio)
+  let scaledFontSize = 32 * exportRatio;
   overlayPG.textFont(FONT_NAME);
   ctx.font = `${scaledFontSize}px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
@@ -470,11 +471,11 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-  // UPDATED EXPORT PADDING: Matches 11px Top/Bottom and 7px Left/Right
-  let padX = 10 * exportRatio; 
-  let padY = 11 * exportRatio; 
-  let gap = 10 * exportRatio;
-  let radius = 8 * exportRatio;
+  // UPDATED EXPORT PADDING: Doubled from (10, 11, 10, 8) to (20, 22, 20, 16)
+  let padX = 20 * exportRatio; 
+  let padY = 22 * exportRatio; 
+  let gap = 20 * exportRatio;
+  let radius = 16 * exportRatio;
   
   let h = scaledFontSize + (padY * 2); 
   let w1 = txtWidth + (padX * 2);
@@ -662,10 +663,10 @@ function drawLogoMode() {
   else {
       let stepSize = TWO_PI / nodes.length, period = 60;
       let tickIndex = floor(frameCount / period);
-      // Normalized time 0 -> 1
-      let rawT = constrain((frameCount % period) / (period * 0.5), 0, 1);
-      // Custom Bezier Easing: 0.5, 0.1, 0.1, 0.9
-      let easedT = cubicBezier(rawT, 0.5, 0.1, 0.1, 0.9);
+      // Normalized time 0 -> 1
+      let rawT = constrain((frameCount % period) / (period * 0.5), 0, 1);
+      // Custom Bezier Easing: 0.5, 0.1, 0.1, 0.9
+      let easedT = cubicBezier(rawT, 0.5, 0.1, 0.1, 0.9);
       rotationOffset = (tickIndex + easedT) * stepSize;
   }
 
@@ -717,44 +718,44 @@ function windowResized() {
 
 // --- HELPER: CUBIC BEZIER SOLVER ---
 function cubicBezier(t, x1, y1, x2, y2) {
-  // Solves for cubic bezier curve (CSS-like)
-  // x1, y1, x2, y2 are control points 1 and 2 (0,0 and 1,1 are implicit)
-  
-  // Calculate coefficients for X and Y
-  let cx = 3 * x1;
-  let bx = 3 * (x2 - x1) - cx;
-  let ax = 1 - cx - bx;
-  
-  let cy = 3 * y1;
-  let by = 3 * (y2 - y1) - cy;
-  let ay = 1 - cy - by;
+  // Solves for cubic bezier curve (CSS-like)
+  // x1, y1, x2, y2 are control points 1 and 2 (0,0 and 1,1 are implicit)
+  
+  // Calculate coefficients for X and Y
+  let cx = 3 * x1;
+  let bx = 3 * (x2 - x1) - cx;
+  let ax = 1 - cx - bx;
+  
+  let cy = 3 * y1;
+  let by = 3 * (y2 - y1) - cy;
+  let ay = 1 - cy - by;
 
-  function sampleCurveX(tVal) { return ((ax * tVal + bx) * tVal + cx) * tVal; }
-  function sampleCurveY(tVal) { return ((ay * tVal + by) * tVal + cy) * tVal; }
-  function sampleCurveDerivativeX(tVal) { return (3 * ax * tVal + 2 * bx) * tVal + cx; }
+  function sampleCurveX(tVal) { return ((ax * tVal + bx) * tVal + cx) * tVal; }
+  function sampleCurveY(tVal) { return ((ay * tVal + by) * tVal + cy) * tVal; }
+  function sampleCurveDerivativeX(tVal) { return (3 * ax * tVal + 2 * bx) * tVal + cx; }
 
-  // Given an x (time), solve for t using Newton-Raphson
-  function solveCurveX(x) {
-    let t0, t1, t2, x2, d2, i;
-    for (t2 = x, i = 0; i < 8; i++) {
-      x2 = sampleCurveX(t2) - x;
-      if (Math.abs(x2) < 1e-6) return t2;
-      d2 = sampleCurveDerivativeX(t2);
-      if (Math.abs(d2) < 1e-6) break;
-      t2 = t2 - x2 / d2;
-    }
-    // Fallback to bisection
-    t0 = 0.0; t1 = 1.0; t2 = x;
-    if (t2 < t0) return t0;
-    if (t2 > t1) return t1;
-    while (t0 < t1) {
-      x2 = sampleCurveX(t2);
-      if (Math.abs(x2 - x) < 1e-6) return t2;
-      if (x2 > x) t1 = t2;
-      else t0 = t2;
-      t2 = (t1 - t0) * 0.5 + t0;
-    }
-    return t2;
-  }
-  return sampleCurveY(solveCurveX(t));
+  // Given an x (time), solve for t using Newton-Raphson
+  function solveCurveX(x) {
+    let t0, t1, t2, x2, d2, i;
+    for (t2 = x, i = 0; i < 8; i++) {
+      x2 = sampleCurveX(t2) - x;
+      if (Math.abs(x2) < 1e-6) return t2;
+      d2 = sampleCurveDerivativeX(t2);
+      if (Math.abs(d2) < 1e-6) break;
+      t2 = t2 - x2 / d2;
+    }
+    // Fallback to bisection
+    t0 = 0.0; t1 = 1.0; t2 = x;
+    if (t2 < t0) return t0;
+    if (t2 > t1) return t1;
+    while (t0 < t1) {
+      x2 = sampleCurveX(t2);
+      if (Math.abs(x2 - x) < 1e-6) return t2;
+      if (x2 > x) t1 = t2;
+      else t0 = t2;
+      t2 = (t1 - t0) * 0.5 + t0;
+    }
+    return t2;
+  }
+  return sampleCurveY(solveCurveX(t));
 }

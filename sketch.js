@@ -165,8 +165,8 @@ function setupGadget() {
   
   gadgetContainer = createDiv('');
   gadgetContainer.style('display', 'flex');
-// UPDATED GAP: 1.5x previous (20px * 1.5 = 30px)
-  gadgetContainer.style('gap', '30px');
+// UPDATED GAP: 2.5x original (10px * 2.5)
+  gadgetContainer.style('gap', '25px');
   gadgetContainer.style('align-items', 'center');
   gadgetContainer.style('justify-content', 'center');
   gadgetContainer.style('position', 'absolute');
@@ -194,16 +194,16 @@ function styleGadgetElement(elt) {
   elt.style('background', 'rgba(235, 235, 235, 0.85)');
   elt.style('backdrop-filter', 'blur(100px)'); 
   elt.style('-webkit-backdrop-filter', 'blur(25px)');
-// UPDATED RADIUS: 1.5x previous (16px * 1.5 = 24px)
-  elt.style('border-radius', '24px');
+// UPDATED RADIUS: 2.5x original (8px * 2.5)
+  elt.style('border-radius', '20px');
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
   
-// UPDATED PADDING: 1.5x previous (22px/20px * 1.5 = 33px 30px)
-  elt.style('padding', '33px 30px'); 
+// UPDATED PADDING: 2.5x original (11px -> 28px, 10px -> 25px)
+  elt.style('padding', '28px 25px'); 
   
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
-// UPDATED FONT SIZE: 1.5x previous (32px * 1.5 = 48px)
-  elt.style('font-size', '48px');
+// UPDATED FONT SIZE: 2.5x original (16px * 2.5)
+  elt.style('font-size', '40px');
   elt.style('color', '#000');
   elt.style('outline', 'none');
   elt.style('text-align', 'center');
@@ -461,8 +461,8 @@ function drawGadgetOverlay() {
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-// UPDATED FONT SIZE: 1.5x previous (32 * 1.5 * exportRatio)
-  let scaledFontSize = 48 * exportRatio;
+// UPDATED FONT SIZE: 2.5x original (16 * 2.5 * exportRatio)
+  let scaledFontSize = 40 * exportRatio;
   overlayPG.textFont(FONT_NAME);
   ctx.font = `${scaledFontSize}px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
@@ -474,11 +474,11 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-// UPDATED EXPORT PADDING/GAP/RADIUS: 1.5x previous values
-  let padX = 30 * exportRatio; 
-  let padY = 33 * exportRatio; 
-  let gap = 30 * exportRatio;
-  let radius = 24 * exportRatio;
+// UPDATED EXPORT PADDING/GAP/RADIUS: 2.5x original values
+  let padX = 25 * exportRatio; 
+  let padY = 28 * exportRatio; 
+  let gap = 25 * exportRatio;
+  let radius = 20 * exportRatio;
   
   let h = scaledFontSize + (padY * 2); 
   let w1 = txtWidth + (padX * 2);
@@ -725,7 +725,7 @@ function cubicBezier(t, x1, y1, x2, y2) {
   // x1, y1, x2, y2 are control points 1 and 2 (0,0 and 1,1 are implicit)
   
   // Calculate coefficients for X and Y
-  let cx = 3 * x1;
+  let cx = 3 * x1;a
   let bx = 3 * (x2 - x1) - cx;
   let ax = 1 - cx - bx;
   

@@ -1,6 +1,7 @@
 /**
  * Cosmos Circular Ring (KINETIC RING)
  * Font Updated: ABCOracle-Book.otf
+ * Motion Updated: Custom Bezier (0.5, 0.1, 0.1, 0.9)
  */
 
 let mode = 4; 
@@ -470,7 +471,7 @@ function handleCameraDrag() {
   camRotX += (mouseY - prevMouseY) * sensitivity;
   
   camRotX = constrain(camRotX, -HALF_PI, HALF_PI); 
-  camRotY = constrain(camRotY, -PI, PI);              
+  camRotY = constrain(camRotY, -PI, PI);               
   
   prevMouseX = mouseX;
   prevMouseY = mouseY;
@@ -705,39 +706,67 @@ function drawLogoMode() {
   let fovVal = perspectiveSlider.value();
   let fov = radians(fovVal);
   perspective(fov, width / height, 0.1, 50000);
+  
+  // Camera Setup
   let scaleFactor = tan(PI / 6.0) / tan(fov / 2.0);
   let useScale = (isExporting || isVideoExport) ? exportRatio : 1;
   let finalDist = camDist * useScale * scaleFactor;
   camera(0, 0, finalDist, 0, 0, 0, 0, 1, 0);
+  
   if (!isExporting && !isRecording) handleCameraDrag();
-  rotateX(camRotX); rotateY(camRotY);
+  rotateX(camRotX); 
+  rotateY(camRotY);
   if (isExporting || isVideoExport) scale(exportRatio);
 
+  // --- MOTION LOGIC ---
   let rotationOffset = 0;
-  if (!isTicking) rotationOffset = frameCount * 0.03;
-  else {
-      let stepSize = TWO_PI / nodes.length, period = 60;
-      let tickIndex = floor(frameCount / period);
-      // Normalized time 0 -> 1
-      let rawT = constrain((frameCount % period) / (period * 0.5), 0, 1);
-      // Custom Bezier Easing: 0.5, 0.1, 0.1, 0.9
-      let easedT = cubicBezier(rawT, 0.5, 0.1, 0.1, 0.9);
-      rotationOffset = (tickIndex + easedT) * stepSize;
+  
+  if (!isTicking) {
+    // Smooth continuous rotation
+    rotationOffset = frameCount * 0.03;
+  } else {
+    // "Clock" Mode with Custom Easing
+    let stepSize = TWO_PI / nodes.length;
+    // UPDATED: Slower period (90) to emphasize the heavy feel
+    let period = 90; 
+    let tickIndex = floor(frameCount / period);
+    
+    // UPDATED: 90% duty cycle (period * 0.9) to allow the "glide" to finish
+    let rawT = constrain((frameCount % period) / (period * 0.9), 0, 1);
+    
+    // UPDATED: The "Soft Snap" Curve: (0.5, 0.1, 0.1, 0.9)
+    let easedT = cubicBezier(rawT, 0.5, 0.1, 0.1, 0.9);
+    
+    rotationOffset = (tickIndex + easedT) * stepSize;
   }
 
+  // --- DRAW NODES ---
   for (let i = 0; i < nodes.length; i++) {
     let n = nodes[i];
     push();
+    
+    // Slight breathing animation on the Z-axis
     let expansion = isTicking ? 0 : sin(frameCount * 0.04 + i * 0.1) * 200;
     let zOffset = isTicking ? 0 : cos(frameCount * 0.05 + i * 0.2) * 150;
+    
     let currentRadius = n.radius + 300 + expansion;
     let orbitalAngle = n.angle + rotationOffset;
-    let x = currentRadius * cos(orbitalAngle), y = currentRadius * sin(orbitalAngle), z = zOffset;
+    
+    let x = currentRadius * cos(orbitalAngle); 
+    let y = currentRadius * sin(orbitalAngle); 
+    let z = zOffset;
+    
     let realDistance = getTransformedDistance(x, y, z, camRotX, camRotY, finalDist);
+    
     translate(x, y, z);
-    rotateY(-camRotY); rotateX(-camRotX);
+    rotateY(-camRotY); 
+    rotateX(-camRotX);
+    
+    // Scale effect
     let sizeWave = isTicking ? 1 : map(sin(frameCount * 0.05 + i * 0.5), -1, 1, 0.6, 1.4);
-    n.targetScale = lerp(n.targetScale, 1, 0.2); scale(n.targetScale * sizeWave);
+    n.targetScale = lerp(n.targetScale, 1, 0.2); 
+    scale(n.targetScale * sizeWave);
+    
     let imgToDraw = n.img.original ? n.img.original : n.img;
     drawDynamicRoundedPlane(imgToDraw, n.w, n.h, realDistance, finalDist);
     pop();

@@ -29,6 +29,10 @@ let recordingDuration = 600;
 let recordingStartFrame = 0;
 let isVideoExport = false;
 
+// --- NEW: Background Worker Variable ---
+let bgWorker;
+// ---------------------------------------
+
 let uploadInput;
 let exportSelect;
 let exportBtn;
@@ -73,6 +77,9 @@ function setup() {
   
   injectFontCSS();
   overlayPG = createGraphics(windowWidth, windowHeight);
+
+  // Initialize the background worker for background recording
+  setupBackgroundWorker();
 
   if (typeof CCapture === 'undefined') {
       loadScript("https://unpkg.com/ccapture.js@1.1.0/build/CCapture.all.min.js", () => {
@@ -121,6 +128,37 @@ function setup() {
   
   changeMode(4); 
 }
+
+// --- NEW: Worker Logic Function ---
+function setupBackgroundWorker() {
+    // We create a "virtual" file (Blob) containing the worker code.
+    // This worker simply sends a message back to the main thread 60 times a second.
+    // Workers are NOT throttled by background tabs.
+    const workerCode = `
+        let interval;
+        self.onmessage = function(e) {
+            if (e.data === 'start') {
+                // 1000ms / 60fps = ~16.6ms
+                interval = setInterval(() => {
+                    self.postMessage('tick');
+                }, 1000/60);
+            } else if (e.data === 'stop') {
+                clearInterval(interval);
+            }
+        };
+    `;
+    
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    bgWorker = new Worker(URL.createObjectURL(blob));
+
+    bgWorker.onmessage = function(e) {
+        if (isRecording) {
+            // Manually trigger a frame draw when the worker ticks
+            redraw(); 
+        }
+    };
+}
+// ----------------------------------
 
 function injectFontCSS() {
   let css = `
@@ -411,10 +449,22 @@ function startVideoExport() {
     recorder.start();
     isRecording = true;
     recordingStartFrame = frameCount;
+
+    // --- NEW: Start Worker Loop ---
+    // This stops the browser's default throttle-able loop
+    // and starts our unthrottled worker loop
+    noLoop(); 
+    if(bgWorker) bgWorker.postMessage('start');
+    // ------------------------------
 }
 
 function stopVideoExport() {
     if(recorder) {
+        // --- NEW: Stop Worker Loop ---
+        if(bgWorker) bgWorker.postMessage('stop');
+        loop(); // Restore default browser loop
+        // -----------------------------
+
         recorder.stop();
         recorder.save();
         isRecording = false;
@@ -547,7 +597,6 @@ function handleCameraDrag() {
 }
 
 function draw() {
-  // UPDATED: Background color changed to #F8F8FA
   background('#F8F8FA'); 
   drawLogoMode();
   

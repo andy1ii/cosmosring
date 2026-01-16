@@ -2,7 +2,7 @@
  * Cosmos Circular Ring (KINETIC RING)
  * Font Updated: ABCOracle-Book.otf
  * Motion Updated: Custom Bezier (0.5, 0.1, 0.1, 0.9)
- * Fix: Gadget consistency across Export/Preview
+ * Fix: Added specific STOP button inside the recording overlay
  */
 
 let mode = 4; 
@@ -49,8 +49,12 @@ let gadgetContainer;
 let pillInput;          
 let pillDisplayText;  
 let pillCounter;
-// GLOBAL SCALE FACTOR (Crucial for matching preview to export)
 let gadgetScaleFactor = 1.0;
+
+// --- RECORDING OVERLAY VARS ---
+let recOverlay;
+let recStatusText;
+let overlayStopBtn; // New dedicated stop button
 
 // --- 2D OVERLAY BUFFER ---
 let overlayPG; 
@@ -123,10 +127,11 @@ function setup() {
   
   setupModeButtons();
   setupGadget();
+  setupRecordingOverlay(); 
 
   generatePlaceholders();
   
-  layoutGadget(); // Initial layout calc
+  layoutGadget(); 
   positionUI(); 
   
   changeMode(4); 
@@ -166,7 +171,6 @@ function setupModeButtons() {
 
 function setupGadget() {
   pillInput = createInput('Feeeeeelings');
-  // Structural styles only, dimensions handled in layoutGadget
   pillInput.style('background', 'transparent');
   pillInput.style('border', '1px solid #ccc');
   pillInput.style('border-radius', '4px');
@@ -197,6 +201,45 @@ function setupGadget() {
   updatePillText();
 }
 
+function setupRecordingOverlay() {
+  // Create a full-screen white overlay
+  recOverlay = createDiv('');
+  recOverlay.style('position', 'fixed');
+  recOverlay.style('top', '0');
+  recOverlay.style('left', '0');
+  recOverlay.style('width', '100%');
+  recOverlay.style('height', '100%');
+  recOverlay.style('background', 'rgba(255, 255, 255, 1)'); 
+  recOverlay.style('z-index', '99999'); // Extremely high Z-index
+  recOverlay.style('display', 'none'); 
+  recOverlay.style('flex-direction', 'column');
+  recOverlay.style('align-items', 'center');
+  recOverlay.style('justify-content', 'center');
+  
+  recStatusText = createDiv('Processing Video...');
+  recStatusText.parent(recOverlay);
+  recStatusText.style('font-family', `'${FONT_NAME}', sans-serif`);
+  recStatusText.style('font-size', '18px');
+  recStatusText.style('color', '#333');
+  recStatusText.style('margin-bottom', '20px');
+  
+  // Create a dedicated STOP button inside the overlay
+  overlayStopBtn = createButton('Stop Recording');
+  overlayStopBtn.parent(recOverlay);
+  overlayStopBtn.mousePressed(stopVideoExport); // Links to the stop function
+  
+  // Style the stop button to be prominent
+  overlayStopBtn.style('font-family', `'${FONT_NAME}', sans-serif`);
+  overlayStopBtn.style('font-size', '14px');
+  overlayStopBtn.style('color', '#fff');
+  overlayStopBtn.style('background', '#ff4d4d'); // Red background
+  overlayStopBtn.style('border', 'none');
+  overlayStopBtn.style('padding', '10px 20px');
+  overlayStopBtn.style('border-radius', '20px');
+  overlayStopBtn.style('cursor', 'pointer');
+  overlayStopBtn.style('box-shadow', '0 4px 6px rgba(0,0,0,0.1)');
+}
+
 function updatePillText() {
     let text = pillInput.value();
     if(text.length === 0) text = '&nbsp;';
@@ -215,22 +258,18 @@ function styleGadgetElement(elt) {
   elt.style('white-space', 'nowrap'); 
 }
 
-// --- RESPONSIVE SIZING LOGIC ---
-// Calculates scale based on window height and stores it globally
 function layoutGadget() {
   let h = windowHeight;
-  // Constraint keeps the UI usable on very small or very tall browser windows
-  // We store this exact factor to use in Export later
+  // Calculate and store scale factor
   gadgetScaleFactor = constrain(h / 1000.0, 0.5, 1.2); 
 
-  // 1.5x Base Values (at scale 1.0)
+  // 1.5x Base Values
   let gFont = 24 * gadgetScaleFactor;
   let gPadY = 17 * gadgetScaleFactor;
   let gPadX = 15 * gadgetScaleFactor;
   let gRadius = 12 * gadgetScaleFactor;
   let gGap = 15 * gadgetScaleFactor;
 
-  // Apply to DOM (Live View)
   gadgetContainer.style('gap', `${gGap}px`);
   
   let elements = [pillDisplayText, pillCounter];
@@ -337,6 +376,10 @@ function startVideoExport() {
         alert("Video library loading... please wait 2 seconds and try again.");
         return;
     }
+    
+    // Show overlay immediately
+    recOverlay.style('display', 'flex');
+    
     let choice = exportSelect.value();
     let targetW = width, targetH = height;
     if (choice === 'square') { targetW = 1080; targetH = 1080; }
@@ -359,9 +402,8 @@ function startVideoExport() {
     isRecording = true;
     recordingStartFrame = frameCount;
     
-    recordBtn.html("Stop");
-    recordBtn.style('background', '#ffcccc');
-    recordBtn.style('color', 'red');
+    // We don't need to change recordBtn style here anymore
+    // because it's hidden under the overlay.
 }
 
 function stopVideoExport() {
@@ -370,16 +412,18 @@ function stopVideoExport() {
         recorder.save();
         isRecording = false;
         isVideoExport = false;
-        recordBtn.html("Save Video");
-        recordBtn.style('background', 'transparent');
-        recordBtn.style('color', '#555');
+        
+        // Restore canvas size
         resizeCanvas(windowWidth, windowHeight);
         exportRatio = 1;
         aspectMultiplier = 1;
-        // Recalculate UI for window just in case
+        
         layoutGadget();
         positionUI();
         toggleUI(isUIVisible);
+        
+        // Hide overlay
+        recOverlay.style('display', 'none');
     }
 }
 
@@ -408,7 +452,6 @@ function handleExport() {
   isExporting = false;
   exportRatio = 1;
   aspectMultiplier = 1;
-  // Recalculate UI for window just in case
   layoutGadget();
   positionUI();
   toggleUI(isUIVisible);
@@ -454,6 +497,9 @@ function makeRounded(img, radius) {
 }
 
 function mousePressed() {
+  // If overlay is active, ignore clicks on canvas
+  if (recOverlay && recOverlay.style('display') === 'flex') return;
+  
   if (mouseY > height - 50) return;
   prevMouseX = mouseX;
   prevMouseY = mouseY;
@@ -481,7 +527,16 @@ function draw() {
   background(255);
   drawLogoMode();
   
-  if (isExporting || isRecording) drawGadgetOverlay();
+  if (isExporting || isRecording) {
+      drawGadgetOverlay();
+      // Update text status
+      if (recStatusText) {
+        let framesLeft = recordingDuration - (frameCount - recordingStartFrame);
+        // Ensure non-negative
+        if (framesLeft < 0) framesLeft = 0;
+        recStatusText.html(`Recording... Frames left: ${framesLeft}`);
+      }
+  }
 
   if (isRecording) {
       recorder.capture(document.querySelector('canvas'));
@@ -496,14 +551,9 @@ function drawGadgetOverlay() {
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-  // --- MATCHING LOGIC ---
-  // We use gadgetScaleFactor (which governed the live view)
-  // And multiply by exportRatio (how much bigger the export is vs the window)
-  // This ensures proportions are preserved perfectly.
-  
+  // MATCHING LOGIC
   let finalScale = gadgetScaleFactor * exportRatio;
 
-  // Base 1.5x Values
   let baseFont = 24;
   let basePadX = 15;
   let basePadY = 17;
@@ -522,7 +572,6 @@ function drawGadgetOverlay() {
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
 
-  // Apply Combined Scale
   let padX = basePadX * finalScale; 
   let padY = basePadY * finalScale; 
   let gap = baseGap * finalScale;
@@ -702,7 +751,6 @@ function drawLogoMode() {
   let fov = radians(fovVal);
   perspective(fov, width / height, 0.1, 50000);
   
-  // Camera Setup
   let scaleFactor = tan(PI / 6.0) / tan(fov / 2.0);
   let useScale = (isExporting || isVideoExport) ? exportRatio : 1;
   let finalDist = camDist * useScale * scaleFactor;
@@ -713,25 +761,18 @@ function drawLogoMode() {
   rotateY(camRotY);
   if (isExporting || isVideoExport) scale(exportRatio);
 
-  // --- MOTION LOGIC ---
   let rotationOffset = 0;
-  
   if (!isTicking) {
     rotationOffset = frameCount * 0.03;
   } else {
-    // Custom Easing
     let stepSize = TWO_PI / nodes.length;
     let period = 90; 
     let tickIndex = floor(frameCount / period);
-    
     let rawT = constrain((frameCount % period) / (period * 0.9), 0, 1);
-    
     let easedT = cubicBezier(rawT, 0.5, 0.1, 0.1, 0.9);
-    
     rotationOffset = (tickIndex + easedT) * stepSize;
   }
 
-  // --- DRAW NODES ---
   for (let i = 0; i < nodes.length; i++) {
     let n = nodes[i];
     push();
@@ -798,7 +839,6 @@ function cubicBezier(t, x1, y1, x2, y2) {
   let cx = 3 * x1;
   let bx = 3 * (x2 - x1) - cx;
   let ax = 1 - cx - bx;
-  
   let cy = 3 * y1;
   let by = 3 * (y2 - y1) - cy;
   let ay = 1 - cy - by;

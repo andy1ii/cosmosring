@@ -2,6 +2,7 @@
  * Cosmos Circular Ring (KINETIC RING)
  * Font Updated: ABCOracle-Book.otf
  * Motion Updated: Custom Bezier (0.5, 0.1, 0.1, 0.9)
+ * Fix: Gadget consistency across Export/Preview
  */
 
 let mode = 4; 
@@ -48,6 +49,8 @@ let gadgetContainer;
 let pillInput;          
 let pillDisplayText;  
 let pillCounter;
+// GLOBAL SCALE FACTOR (Crucial for matching preview to export)
+let gadgetScaleFactor = 1.0;
 
 // --- 2D OVERLAY BUFFER ---
 let overlayPG; 
@@ -123,7 +126,7 @@ function setup() {
 
   generatePlaceholders();
   
-  layoutGadget(); // Initial layout
+  layoutGadget(); // Initial layout calc
   positionUI(); 
   
   changeMode(4); 
@@ -212,25 +215,22 @@ function styleGadgetElement(elt) {
   elt.style('white-space', 'nowrap'); 
 }
 
-// --- RESPONSIVE SIZING LOGIC (For Browser DOM) ---
+// --- RESPONSIVE SIZING LOGIC ---
+// Calculates scale based on window height and stores it globally
 function layoutGadget() {
-  // This function ONLY affects the live HTML elements in the browser.
-  // It clamps values so they don't look weird on extreme window sizes.
-  
-  // Base Height: 1000px
-  // 1.5x Values: Font 24, Pad 17/15, Radius 12
-  
   let h = windowHeight;
   // Constraint keeps the UI usable on very small or very tall browser windows
-  let domScale = constrain(h / 1000.0, 0.5, 1.2); 
+  // We store this exact factor to use in Export later
+  gadgetScaleFactor = constrain(h / 1000.0, 0.5, 1.2); 
 
-  let gFont = 24 * domScale;
-  let gPadY = 17 * domScale;
-  let gPadX = 15 * domScale;
-  let gRadius = 12 * domScale;
-  let gGap = 15 * domScale;
+  // 1.5x Base Values (at scale 1.0)
+  let gFont = 24 * gadgetScaleFactor;
+  let gPadY = 17 * gadgetScaleFactor;
+  let gPadX = 15 * gadgetScaleFactor;
+  let gRadius = 12 * gadgetScaleFactor;
+  let gGap = 15 * gadgetScaleFactor;
 
-  // Apply to DOM
+  // Apply to DOM (Live View)
   gadgetContainer.style('gap', `${gGap}px`);
   
   let elements = [pillDisplayText, pillCounter];
@@ -376,7 +376,7 @@ function stopVideoExport() {
         resizeCanvas(windowWidth, windowHeight);
         exportRatio = 1;
         aspectMultiplier = 1;
-        // Recalculate UI for window
+        // Recalculate UI for window just in case
         layoutGadget();
         positionUI();
         toggleUI(isUIVisible);
@@ -408,7 +408,7 @@ function handleExport() {
   isExporting = false;
   exportRatio = 1;
   aspectMultiplier = 1;
-  // Recalculate UI for window
+  // Recalculate UI for window just in case
   layoutGadget();
   positionUI();
   toggleUI(isUIVisible);
@@ -471,7 +471,7 @@ function handleCameraDrag() {
   camRotX += (mouseY - prevMouseY) * sensitivity;
   
   camRotX = constrain(camRotX, -HALF_PI, HALF_PI); 
-  camRotY = constrain(camRotY, -PI, PI);               
+  camRotY = constrain(camRotY, -PI, PI);              
   
   prevMouseX = mouseX;
   prevMouseY = mouseY;
@@ -490,37 +490,27 @@ function draw() {
 }
 
 function drawGadgetOverlay() {
-  // This function draws the overlay onto the Export/Record CANVAS
-  // It must rely on 'width' and 'height' (canvas dims), NOT 'windowHeight'
-  
   if (overlayPG.width !== width || overlayPG.height !== height) {
       overlayPG = createGraphics(width, height);
   }
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-  // --- EXPORT SCALING LOGIC ---
-  // We want the gadget to scale linearly with the canvas height.
-  // Reference height: 1000px.
-  // At 1000px, 1.5x values: Font 24, Pad 17/15, Radius 12.
+  // --- MATCHING LOGIC ---
+  // We use gadgetScaleFactor (which governed the live view)
+  // And multiply by exportRatio (how much bigger the export is vs the window)
+  // This ensures proportions are preserved perfectly.
   
-  let exportScale = height / 1000.0;
-  
-  // UNCLAMPED: If we export at 4000px, we want the text to be HUGE (4x).
-  // If we record at 500px, we want it small (0.5x).
-  
+  let finalScale = gadgetScaleFactor * exportRatio;
+
+  // Base 1.5x Values
   let baseFont = 24;
   let basePadX = 15;
   let basePadY = 17;
   let baseGap = 15;
   let baseRadius = 12;
 
-  let scaledFontSize = baseFont * exportScale;
-  let padX = basePadX * exportScale; 
-  let padY = basePadY * exportScale; 
-  let gap = baseGap * exportScale;
-  let radius = baseRadius * exportScale;
-
+  let scaledFontSize = baseFont * finalScale;
   overlayPG.textFont(FONT_NAME);
   ctx.font = `${scaledFontSize}px '${FONT_NAME}', sans-serif`; 
   ctx.textAlign = "center";
@@ -531,6 +521,12 @@ function drawGadgetOverlay() {
   let countTxt = nodes.length + " elements";
   let txtWidth = ctx.measureText(txt).width;
   let countWidth = ctx.measureText(countTxt).width;
+
+  // Apply Combined Scale
+  let padX = basePadX * finalScale; 
+  let padY = basePadY * finalScale; 
+  let gap = baseGap * finalScale;
+  let radius = baseRadius * finalScale;
   
   let h = scaledFontSize + (padY * 2); 
   let w1 = txtWidth + (padX * 2);
@@ -541,8 +537,7 @@ function drawGadgetOverlay() {
   let topY = centerY - h/2; 
   
   let bgImg = get(startX, topY, totalW, h);
-  // Blur radius also scales
-  bgImg.filter(BLUR, 10 * exportScale); 
+  bgImg.filter(BLUR, 10 * finalScale); 
   
   // Draw Pill 1
   ctx.save();
@@ -552,7 +547,7 @@ function drawGadgetOverlay() {
   ctx.drawImage(bgImg.canvas, 0, 0, w1, h, startX, topY, w1, h);
   ctx.fillStyle = "rgba(235, 235, 235, 0.85)"; 
   ctx.fill(); 
-  ctx.lineWidth = 1 * exportScale;
+  ctx.lineWidth = 1 * finalScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore(); 
@@ -565,7 +560,7 @@ function drawGadgetOverlay() {
   ctx.drawImage(bgImg.canvas, w1 + gap, 0, w2, h, startX + w1 + gap, topY, w2, h);
   ctx.fillStyle = "rgba(235, 235, 235, 0.85)";
   ctx.fill();
-  ctx.lineWidth = 1 * exportScale;
+  ctx.lineWidth = 1 * finalScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore();
@@ -722,19 +717,15 @@ function drawLogoMode() {
   let rotationOffset = 0;
   
   if (!isTicking) {
-    // Smooth continuous rotation
     rotationOffset = frameCount * 0.03;
   } else {
-    // "Clock" Mode with Custom Easing
+    // Custom Easing
     let stepSize = TWO_PI / nodes.length;
-    // UPDATED: Slower period (90) to emphasize the heavy feel
     let period = 90; 
     let tickIndex = floor(frameCount / period);
     
-    // UPDATED: 90% duty cycle (period * 0.9) to allow the "glide" to finish
     let rawT = constrain((frameCount % period) / (period * 0.9), 0, 1);
     
-    // UPDATED: The "Soft Snap" Curve: (0.5, 0.1, 0.1, 0.9)
     let easedT = cubicBezier(rawT, 0.5, 0.1, 0.1, 0.9);
     
     rotationOffset = (tickIndex + easedT) * stepSize;
@@ -745,7 +736,6 @@ function drawLogoMode() {
     let n = nodes[i];
     push();
     
-    // Slight breathing animation on the Z-axis
     let expansion = isTicking ? 0 : sin(frameCount * 0.04 + i * 0.1) * 200;
     let zOffset = isTicking ? 0 : cos(frameCount * 0.05 + i * 0.2) * 150;
     
@@ -762,7 +752,6 @@ function drawLogoMode() {
     rotateY(-camRotY); 
     rotateX(-camRotX);
     
-    // Scale effect
     let sizeWave = isTicking ? 1 : map(sin(frameCount * 0.05 + i * 0.5), -1, 1, 0.6, 1.4);
     n.targetScale = lerp(n.targetScale, 1, 0.2); 
     scale(n.targetScale * sizeWave);
@@ -789,12 +778,10 @@ function positionUI() {
       modeButtons[i].btn.position(pos, 20);
   }
   
-  // Center gadget
   gadgetContainer.style('left', '50%'); 
   gadgetContainer.style('top', '50%');
   gadgetContainer.style('transform', 'translate(-50%, -50%)');
   
-  // Recalculate sizes based on new window dimensions
   layoutGadget();
 }
 
@@ -808,10 +795,6 @@ function windowResized() {
 
 // --- HELPER: CUBIC BEZIER SOLVER ---
 function cubicBezier(t, x1, y1, x2, y2) {
-  // Solves for cubic bezier curve (CSS-like)
-  // x1, y1, x2, y2 are control points 1 and 2 (0,0 and 1,1 are implicit)
-  
-  // Calculate coefficients for X and Y
   let cx = 3 * x1;
   let bx = 3 * (x2 - x1) - cx;
   let ax = 1 - cx - bx;
@@ -824,7 +807,6 @@ function cubicBezier(t, x1, y1, x2, y2) {
   function sampleCurveY(tVal) { return ((ay * tVal + by) * tVal + cy) * tVal; }
   function sampleCurveDerivativeX(tVal) { return (3 * ax * tVal + 2 * bx) * tVal + cx; }
 
-  // Given an x (time), solve for t using Newton-Raphson
   function solveCurveX(x) {
     let t0, t1, t2, x2, d2, i;
     for (t2 = x, i = 0; i < 8; i++) {
@@ -834,7 +816,6 @@ function cubicBezier(t, x1, y1, x2, y2) {
       if (Math.abs(d2) < 1e-6) break;
       t2 = t2 - x2 / d2;
     }
-    // Fallback to bisection
     t0 = 0.0; t1 = 1.0; t2 = x;
     if (t2 < t0) return t0;
     if (t2 > t1) return t1;

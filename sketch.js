@@ -25,7 +25,6 @@ let exportQualityScale = 2;
 
 let recorder;
 let isRecording = false;
-// UPDATED: Increased to 600 so the video is 10 seconds long at 60fps
 let recordingDuration = 600; 
 let recordingStartFrame = 0;
 let isVideoExport = false;
@@ -408,7 +407,6 @@ function startVideoExport() {
     }
 
     isVideoExport = true;
-    // UPDATED: Framerate set to 60 to match playback speed
     recorder = new CCapture({ format: 'webm', framerate: 60 });
     recorder.start();
     isRecording = true;
@@ -549,7 +547,8 @@ function handleCameraDrag() {
 }
 
 function draw() {
-  background(255);
+  // UPDATED: Background color changed to #F8F8FA
+  background('#F8F8FA'); 
   drawLogoMode();
   
   if (isExporting || isRecording) {

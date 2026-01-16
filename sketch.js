@@ -319,7 +319,7 @@ function mouseWheel(event) {
 function toggleTickMode() {
     isTicking = !isTicking;
     if(isTicking) {
-        tickBtn.html("Motion: Clock");
+        tickBtn.html("Motion: Snap");
         tickBtn.style('background', '#eee');
     } else {
         tickBtn.html("Motion: Smooth");

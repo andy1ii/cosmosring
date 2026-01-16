@@ -2,7 +2,7 @@
  * Cosmos Circular Ring (KINETIC RING)
  * Font Updated: ABCOracle-Book.otf
  * Motion Updated: Custom Bezier (0.5, 0.1, 0.1, 0.9)
- * Fix: Added specific STOP button inside the recording overlay
+ * Fix: HIGH RES EXPORT (Super-sampling) to match Retina/High-DPI previews
  */
 
 let mode = 4; 
@@ -31,6 +31,11 @@ let exportRatio = 1;
 let isExporting = false;
 let aspectMultiplier = 1;
 
+// --- QUALITY SETTINGS ---
+// 2 = Crisp (Retina), 1 = Standard. 
+// If your computer lags too much during recording, change this back to 1.
+let exportQualityScale = 2; 
+
 // Video Recording Variables
 let recorder;
 let isRecording = false;
@@ -54,7 +59,7 @@ let gadgetScaleFactor = 1.0;
 // --- RECORDING OVERLAY VARS ---
 let recOverlay;
 let recStatusText;
-let overlayStopBtn; // New dedicated stop button
+let overlayStopBtn; 
 
 // --- 2D OVERLAY BUFFER ---
 let overlayPG; 
@@ -75,9 +80,13 @@ const FONT_NAME = 'ABCOracleBook';
 const FONT_FILE = 'resources/ABCOracle-Book.otf'; 
 
 function setup() {
-  createCanvas(windowWidth, windowHeight, WEBGL);
+  // Use window size initially
+  let cnv = createCanvas(windowWidth, windowHeight, WEBGL);
+  cnv.id('mainCanvas');
   
-  pixelDensity(1);
+  // PREVIEW: Use the device's native density for crispness
+  pixelDensity(displayDensity());
+  
   noStroke();
   textureMode(NORMAL);
   textureWrap(CLAMP);
@@ -202,42 +211,51 @@ function setupGadget() {
 }
 
 function setupRecordingOverlay() {
-  // Create a full-screen white overlay
   recOverlay = createDiv('');
   recOverlay.style('position', 'fixed');
   recOverlay.style('top', '0');
   recOverlay.style('left', '0');
   recOverlay.style('width', '100%');
   recOverlay.style('height', '100%');
-  recOverlay.style('background', 'rgba(255, 255, 255, 1)'); 
-  recOverlay.style('z-index', '99999'); // Extremely high Z-index
+  recOverlay.style('background', 'rgba(0, 0, 0, 0)'); 
+  recOverlay.style('z-index', '99999'); 
   recOverlay.style('display', 'none'); 
   recOverlay.style('flex-direction', 'column');
   recOverlay.style('align-items', 'center');
-  recOverlay.style('justify-content', 'center');
+  recOverlay.style('justify-content', 'flex-start'); 
+  recOverlay.style('padding-top', '50px');
   
+  let statusContainer = createDiv('');
+  statusContainer.parent(recOverlay);
+  statusContainer.style('background', 'rgba(255, 255, 255, 0.9)');
+  statusContainer.style('padding', '15px 30px');
+  statusContainer.style('border-radius', '30px');
+  statusContainer.style('display', 'flex');
+  statusContainer.style('flex-direction', 'column');
+  statusContainer.style('align-items', 'center');
+  statusContainer.style('box-shadow', '0 4px 10px rgba(0,0,0,0.1)');
+
   recStatusText = createDiv('Processing Video...');
-  recStatusText.parent(recOverlay);
+  recStatusText.parent(statusContainer);
   recStatusText.style('font-family', `'${FONT_NAME}', sans-serif`);
-  recStatusText.style('font-size', '18px');
+  recStatusText.style('font-size', '16px');
+  recStatusText.style('font-weight', 'bold');
   recStatusText.style('color', '#333');
-  recStatusText.style('margin-bottom', '20px');
+  recStatusText.style('margin-bottom', '10px');
+  recStatusText.style('white-space', 'nowrap');
   
-  // Create a dedicated STOP button inside the overlay
   overlayStopBtn = createButton('Stop Recording');
-  overlayStopBtn.parent(recOverlay);
-  overlayStopBtn.mousePressed(stopVideoExport); // Links to the stop function
+  overlayStopBtn.parent(statusContainer);
+  overlayStopBtn.mousePressed(stopVideoExport); 
   
-  // Style the stop button to be prominent
   overlayStopBtn.style('font-family', `'${FONT_NAME}', sans-serif`);
-  overlayStopBtn.style('font-size', '14px');
+  overlayStopBtn.style('font-size', '12px');
   overlayStopBtn.style('color', '#fff');
-  overlayStopBtn.style('background', '#ff4d4d'); // Red background
+  overlayStopBtn.style('background', '#ff4d4d'); 
   overlayStopBtn.style('border', 'none');
-  overlayStopBtn.style('padding', '10px 20px');
-  overlayStopBtn.style('border-radius', '20px');
+  overlayStopBtn.style('padding', '8px 16px');
+  overlayStopBtn.style('border-radius', '15px');
   overlayStopBtn.style('cursor', 'pointer');
-  overlayStopBtn.style('box-shadow', '0 4px 6px rgba(0,0,0,0.1)');
 }
 
 function updatePillText() {
@@ -260,10 +278,8 @@ function styleGadgetElement(elt) {
 
 function layoutGadget() {
   let h = windowHeight;
-  // Calculate and store scale factor
   gadgetScaleFactor = constrain(h / 1000.0, 0.5, 1.2); 
 
-  // 1.5x Base Values
   let gFont = 24 * gadgetScaleFactor;
   let gPadY = 17 * gadgetScaleFactor;
   let gPadX = 15 * gadgetScaleFactor;
@@ -377,33 +393,59 @@ function startVideoExport() {
         return;
     }
     
-    // Show overlay immediately
+    // 1. Show overlay
     recOverlay.style('display', 'flex');
     
+    // 2. Hide other UI
+    toggleUI(false);
+    
     let choice = exportSelect.value();
-    let targetW = width, targetH = height;
-    if (choice === 'square') { targetW = 1080; targetH = 1080; }
-    else if (choice === 'portrait') { targetW = 1080; targetH = 1920; }
-    else if (choice === 'landscape') { targetW = 1920; targetH = 1080; }
-    else if (choice === 'print') { targetW = 2400; targetH = 3000; }
+    let baseW = width, baseH = height;
+    
+    // Determine Base Resolution
+    if (choice === 'square') { baseW = 1080; baseH = 1080; }
+    else if (choice === 'portrait') { baseW = 1080; baseH = 1920; }
+    else if (choice === 'landscape') { baseW = 1920; baseH = 1080; }
+    else if (choice === 'print') { baseW = 2400; baseH = 3000; }
+
+    // 3. APPLY SUPER-SAMPLING (Multiply by exportQualityScale)
+    // This creates a much larger canvas internally for crisp edges
+    let targetW = baseW * exportQualityScale;
+    let targetH = baseH * exportQualityScale;
 
     resizeCanvas(targetW, targetH);
-    exportRatio = targetH / windowHeight;
+    
+    // IMPORTANT: Explicitly set density to 1 for the export canvas 
+    // because we are manually handling the scaling via exportQualityScale.
+    pixelDensity(1); 
+
+    // Calculate ratio based on the LOGICAL size (baseH), not the super-sampled size
+    exportRatio = baseH / windowHeight; 
+    
     aspectMultiplier = 1;
     if (choice !== 'window') {
         let currentAspect = windowWidth / windowHeight;
-        let targetAspect = targetW / targetH;
+        let targetAspect = baseW / baseH;
         if (targetAspect < currentAspect) aspectMultiplier = currentAspect / targetAspect;
     }
     
+    // 4. CSS Scaling to keep it looking normal in browser
+    let canvasEl = document.getElementById('mainCanvas');
+    if (canvasEl) {
+        canvasEl.style.width = '100%';
+        canvasEl.style.height = '100%';
+        canvasEl.style.objectFit = 'contain';
+        canvasEl.style.position = 'absolute';
+        canvasEl.style.top = '50%';
+        canvasEl.style.left = '50%';
+        canvasEl.style.transform = 'translate(-50%, -50%)';
+    }
+
     isVideoExport = true;
     recorder = new CCapture({ format: 'webm', framerate: 30 });
     recorder.start();
     isRecording = true;
     recordingStartFrame = frameCount;
-    
-    // We don't need to change recordBtn style here anymore
-    // because it's hidden under the overlay.
 }
 
 function stopVideoExport() {
@@ -413,42 +455,64 @@ function stopVideoExport() {
         isRecording = false;
         isVideoExport = false;
         
-        // Restore canvas size
+        let canvasEl = document.getElementById('mainCanvas');
+        if (canvasEl) {
+            canvasEl.style.width = '';
+            canvasEl.style.height = '';
+            canvasEl.style.objectFit = '';
+            canvasEl.style.position = '';
+            canvasEl.style.top = '';
+            canvasEl.style.left = '';
+            canvasEl.style.transform = '';
+        }
+        
         resizeCanvas(windowWidth, windowHeight);
+        
+        // Restore Preview Density
+        pixelDensity(displayDensity());
+        
         exportRatio = 1;
         aspectMultiplier = 1;
         
         layoutGadget();
         positionUI();
-        toggleUI(isUIVisible);
-        
-        // Hide overlay
+        toggleUI(true);
         recOverlay.style('display', 'none');
     }
 }
 
 function handleExport() {
   let choice = exportSelect.value();
-  let targetW = width, targetH = height;
+  let baseW = width, baseH = height;
 
-  if (choice === 'square') { targetW = 1080; targetH = 1080; }
-  else if (choice === 'portrait') { targetW = 1080; targetH = 1920; }
-  else if (choice === 'landscape') { targetW = 1920; targetH = 1080; }
-  else if (choice === 'print') { targetW = 2400; targetH = 3000; }
+  if (choice === 'square') { baseW = 1080; baseH = 1080; }
+  else if (choice === 'portrait') { baseW = 1080; baseH = 1920; }
+  else if (choice === 'landscape') { baseW = 1920; baseH = 1080; }
+  else if (choice === 'print') { baseW = 2400; baseH = 3000; }
 
-  exportRatio = targetH / height;
+  // Apply Super-Sampling for Image Export too
+  let targetW = baseW * exportQualityScale;
+  let targetH = baseH * exportQualityScale;
+
+  exportRatio = baseH / height; // Ratio based on logical height
   aspectMultiplier = 1;
   if (choice !== 'window') {
       let currentAspect = width / height;
-      let targetAspect = targetW / targetH;
+      let targetAspect = baseW / baseH;
       if (targetAspect < currentAspect) aspectMultiplier = currentAspect / targetAspect;
   }
 
   isExporting = true;
   resizeCanvas(targetW, targetH);
+  pixelDensity(1); // Manual scaling active
+  
   draw();
   save("cosmos_export_" + choice + ".png");
+  
+  // Restore
   resizeCanvas(windowWidth, windowHeight);
+  pixelDensity(displayDensity());
+  
   isExporting = false;
   exportRatio = 1;
   aspectMultiplier = 1;
@@ -497,9 +561,7 @@ function makeRounded(img, radius) {
 }
 
 function mousePressed() {
-  // If overlay is active, ignore clicks on canvas
   if (recOverlay && recOverlay.style('display') === 'flex') return;
-  
   if (mouseY > height - 50) return;
   prevMouseX = mouseX;
   prevMouseY = mouseY;
@@ -529,10 +591,8 @@ function draw() {
   
   if (isExporting || isRecording) {
       drawGadgetOverlay();
-      // Update text status
       if (recStatusText) {
         let framesLeft = recordingDuration - (frameCount - recordingStartFrame);
-        // Ensure non-negative
         if (framesLeft < 0) framesLeft = 0;
         recStatusText.html(`Recording... Frames left: ${framesLeft}`);
       }
@@ -551,9 +611,12 @@ function drawGadgetOverlay() {
   overlayPG.clear();
   let ctx = overlayPG.drawingContext;
   
-  // MATCHING LOGIC
-  let finalScale = gadgetScaleFactor * exportRatio;
+  // FIX: Because we manually scaled the canvas by exportQualityScale (2x),
+  // We need to incorporate that into our font/shape sizing.
+  
+  let finalScale = gadgetScaleFactor * exportRatio * exportQualityScale;
 
+  // Base 1.5x Values
   let baseFont = 24;
   let basePadX = 15;
   let basePadY = 17;
@@ -751,17 +814,26 @@ function drawLogoMode() {
   let fov = radians(fovVal);
   perspective(fov, width / height, 0.1, 50000);
   
+  // Camera Setup
   let scaleFactor = tan(PI / 6.0) / tan(fov / 2.0);
-  let useScale = (isExporting || isVideoExport) ? exportRatio : 1;
+  
+  // IMPORTANT: We scale the scene logic by exportQualityScale as well, 
+  // because we are rendering onto a 2x sized canvas.
+  let useScale = (isExporting || isVideoExport) ? (exportRatio * exportQualityScale) : 1;
   let finalDist = camDist * useScale * scaleFactor;
   camera(0, 0, finalDist, 0, 0, 0, 0, 1, 0);
   
   if (!isExporting && !isRecording) handleCameraDrag();
   rotateX(camRotX); 
   rotateY(camRotY);
-  if (isExporting || isVideoExport) scale(exportRatio);
+  
+  if (isExporting || isVideoExport) {
+      scale(exportRatio * exportQualityScale);
+  }
 
+  // --- MOTION LOGIC ---
   let rotationOffset = 0;
+  
   if (!isTicking) {
     rotationOffset = frameCount * 0.03;
   } else {
@@ -773,6 +845,7 @@ function drawLogoMode() {
     rotationOffset = (tickIndex + easedT) * stepSize;
   }
 
+  // --- DRAW NODES ---
   for (let i = 0; i < nodes.length; i++) {
     let n = nodes[i];
     push();

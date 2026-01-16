@@ -1,9 +1,3 @@
-/**
- * Cosmos Circular Ring (KINETIC RING)
- * Font Updated: ABCOracle-Book.otf
- * Motion Updated: Custom Bezier (0.5, 0.1, 0.1, 0.9)
- * Fix: HIGH RES EXPORT (Super-sampling) to match Retina/High-DPI previews
- */
 
 let mode = 4; 
 let imgs = [];

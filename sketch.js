@@ -653,60 +653,88 @@ function drawGadgetOverlay() {
   let gap = baseGap * finalScale;
   let radius = baseRadius * finalScale;
   
-  let h = scaledFontSize + (padY * 2); 
-  let w1 = txtWidth + (padX * 2);
-  let w2 = countWidth + (padX * 2);
-  let totalW = w1 + gap + w2;
+  // Use Integers for Dimensions
+  let iH = Math.ceil(scaledFontSize + (padY * 2)); 
+  let iW1 = Math.ceil(txtWidth + (padX * 2));
+  let iW2 = Math.ceil(countWidth + (padX * 2));
+  let iGap = Math.ceil(gap);
+  let iTotalW = iW1 + iGap + iW2;
 
-  let startX = (width - totalW) / 2, centerY = height / 2;
-  let topY = centerY - h/2; 
+  let iStartX = Math.round((width - iTotalW) / 2);
+  let centerY = height / 2;
+  let iTopY = Math.round(centerY - iH/2); 
   
-  let bgImg = get(startX, topY, totalW, h);
+  // --- FIX START: Capture Safety Margin to prevent edge fading ---
+  // We capture EXTRA pixels around the UI so the blur kernel has enough data at the edges
+  let blurAmount = 20 * finalScale;
+  let safeMargin = Math.ceil(blurAmount * 2); // Capture plenty of extra context
   
-  // Adjusted Blur: 20 (was 10) - more obvious, but not opaque
-  bgImg.filter(BLUR, 20 * finalScale); 
+  let capX = iStartX - safeMargin;
+  let capY = iTopY - safeMargin;
+  let capW = iTotalW + (safeMargin * 2);
+  let capH = iH + (safeMargin * 2);
   
+  // Capture larger area
+  let bgImg = get(capX, capY, capW, capH);
+  
+  // Apply Blur to larger area
+  bgImg.filter(BLUR, blurAmount); 
+  
+  // 1. Draw Left Pill
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(startX, topY, w1, h, radius); 
+  ctx.roundRect(iStartX, iTopY, iW1, iH, radius); 
   ctx.clip(); 
-  ctx.drawImage(bgImg.canvas, 0, 0, w1, h, startX, topY, w1, h);
-  
-  // Black with 10% opacity
+  // Draw the image shifted to account for the safety margin we captured
+  ctx.drawImage(bgImg.canvas, 
+      safeMargin, safeMargin, iW1, iH,  // Source: Grab from inside the safety margin
+      iStartX, iTopY, iW1, iH           // Dest: Draw to screen location
+  );
   ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; 
-  
   ctx.fill(); 
   ctx.lineWidth = 1 * finalScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore(); 
   
+  // 2. Draw Right Pill
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(startX + w1 + gap, topY, w2, h, radius);
+  ctx.roundRect(iStartX + iW1 + iGap, iTopY, iW2, iH, radius);
   ctx.clip(); 
-  ctx.drawImage(bgImg.canvas, w1 + gap, 0, w2, h, startX + w1 + gap, topY, w2, h);
-  
-  // Black with 10% opacity
+  ctx.drawImage(bgImg.canvas, 
+      safeMargin + iW1 + iGap, safeMargin, iW2, iH, // Source
+      iStartX + iW1 + iGap, iTopY, iW2, iH          // Dest
+  );
   ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
-  
   ctx.fill();
   ctx.lineWidth = 1 * finalScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
   ctx.stroke();
   ctx.restore();
+  // -----------------------------------------------------------------
   
   ctx.fillStyle = "#000000";
-  ctx.fillText(txt, startX + w1/2, centerY);
-  ctx.fillText(countTxt, startX + w1 + gap + w2/2, centerY);
+  ctx.fillText(txt, iStartX + iW1/2, centerY);
+  ctx.fillText(countTxt, iStartX + iW1 + iGap + iW2/2, centerY);
   
   push();
   resetMatrix();
   camera(0, 0, (height/2.0) / tan(PI*30.0 / 180.0), 0, 0, 0, 0, 1, 0);
-  ortho(-width/2, width/2, -height/2, height/2);
+  
+  // Massive Ortho bounds
+  ortho(-width/2, width/2, -height/2, height/2, -10000, 10000);
   noLights();
+
+  // Force Clear Depth Buffer & Disable Depth Test
+  drawingContext.clear(drawingContext.DEPTH_BUFFER_BIT);
+  drawingContext.disable(drawingContext.DEPTH_TEST);
+
   imageMode(CORNER); 
   image(overlayPG, -width/2, -height/2);
+
+  drawingContext.enable(drawingContext.DEPTH_TEST);
+
   pop();
 }
 

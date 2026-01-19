@@ -278,10 +278,15 @@ function updatePillText() {
     pillDisplayText.html(text);
 }
 
+// --- EDITED: Style Gadget Element (The live HTML UI) ---
 function styleGadgetElement(elt) {
-  elt.style('background', 'rgba(235, 235, 235, 0.85)');
-  elt.style('backdrop-filter', 'blur(100px)'); 
-  elt.style('-webkit-backdrop-filter', 'blur(25px)');
+  // Black with 10% opacity
+  elt.style('background', 'rgba(0, 0, 0, 0.1)');
+  
+  // Adjusted Blur: 20px (visible but not overwhelming)
+  elt.style('backdrop-filter', 'blur(20px)'); 
+  elt.style('-webkit-backdrop-filter', 'blur(20px)');
+  
   elt.style('border', '1px solid rgba(255, 255, 255, 0.2)'); 
   elt.style('font-family', `'${FONT_NAME}', sans-serif`); 
   elt.style('color', '#000');
@@ -590,7 +595,7 @@ function handleCameraDrag() {
   camRotX += (mouseY - prevMouseY) * sensitivity;
   
   camRotX = constrain(camRotX, -HALF_PI, HALF_PI); 
-  camRotY = constrain(camRotY, -PI, PI);               
+  camRotY = constrain(camRotY, -PI, PI);                
   
   prevMouseX = mouseX;
   prevMouseY = mouseY;
@@ -615,6 +620,7 @@ function draw() {
   }
 }
 
+// --- EDITED: Draw Gadget Overlay (The Canvas/Video render) ---
 function drawGadgetOverlay() {
   if (overlayPG.width !== width || overlayPG.height !== height) {
       overlayPG = createGraphics(width, height);
@@ -656,14 +662,19 @@ function drawGadgetOverlay() {
   let topY = centerY - h/2; 
   
   let bgImg = get(startX, topY, totalW, h);
-  bgImg.filter(BLUR, 10 * finalScale); 
+  
+  // Adjusted Blur: 20 (was 10) - more obvious, but not opaque
+  bgImg.filter(BLUR, 20 * finalScale); 
   
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(startX, topY, w1, h, radius); 
   ctx.clip(); 
   ctx.drawImage(bgImg.canvas, 0, 0, w1, h, startX, topY, w1, h);
-  ctx.fillStyle = "rgba(235, 235, 235, 0.85)"; 
+  
+  // Black with 10% opacity
+  ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; 
+  
   ctx.fill(); 
   ctx.lineWidth = 1 * finalScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
@@ -675,7 +686,10 @@ function drawGadgetOverlay() {
   ctx.roundRect(startX + w1 + gap, topY, w2, h, radius);
   ctx.clip(); 
   ctx.drawImage(bgImg.canvas, w1 + gap, 0, w2, h, startX + w1 + gap, topY, w2, h);
-  ctx.fillStyle = "rgba(235, 235, 235, 0.85)";
+  
+  // Black with 10% opacity
+  ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+  
   ctx.fill();
   ctx.lineWidth = 1 * finalScale;
   ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
